@@ -467,7 +467,7 @@ def sse():
 
 # gunicornでも動くようモジュールレベルでスケジューラ起動（全関数定義後）
 _scheduler = BackgroundScheduler()
-_scheduler.add_job(fetch_all_news, "interval", minutes=30)
+_scheduler.add_job(fetch_all_news, "interval", minutes=15)
 _scheduler.start()
 
 if __name__ == "__main__":
