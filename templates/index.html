@@ -12,12 +12,12 @@
   <style>
     :root {
       --header-bg: #007a30;
-      --sidebar-bg: #ffffff;
-      --sidebar-border: #ddeee4;
-      --sidebar-text: #1a3d28;
+      --sidebar-bg: #0d2818;
+      --sidebar-border: rgba(255,255,255,0.08);
+      --sidebar-text: #d8ede0;
       --green-accent: #00a040;
-      --green-hover: #e6f5ec;
-      --green-selected: #d0ead8;
+      --green-hover: rgba(0,160,64,0.15);
+      --green-selected: rgba(0,160,64,0.28);
       --green-light: #e8f5ee;
       --green-tag: #d4edda;
       --green-mid: #2d6b45;
@@ -109,7 +109,7 @@
       display: flex;
       gap: 6px;
       position: relative;
-      background: var(--green-light);
+      background: #1a3d28;
     }
     #suggest-list {
       position: absolute;
@@ -136,16 +136,16 @@
     .suggest-highlight { color: var(--green-accent); font-weight: 700; }
     #add-form input {
       flex: 1;
-      background: #fff;
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 6px;
-      color: var(--text);
+      color: #fff;
       padding: 9px 10px;
       font-size: 14px;
       outline: none;
       min-width: 0;
     }
-    #add-form input::placeholder { color: #a0b8a8; }
+    #add-form input::placeholder { color: rgba(255,255,255,0.4); }
     #add-form input:focus { border-color: var(--green-accent); box-shadow: 0 0 0 2px rgba(0,160,64,0.15); }
     #add-form button {
       background: var(--green-accent);
@@ -191,7 +191,7 @@
       border-left-color: var(--green-accent);
     }
     .all-item span { font-size: 13px; color: var(--sidebar-text); font-weight: 700; flex: 1; }
-    .all-item.active span { color: #007a30; }
+    .all-item.active span { color: #fff; }
 
     .company-item {
       display: flex;
@@ -207,11 +207,11 @@
       background: var(--green-selected);
       border-left-color: var(--green-accent);
     }
-    .company-item.selected .company-name { color: #007a30; font-weight: 600; }
+    .company-item.selected .company-name { color: #fff; font-weight: 600; }
     .company-check {
       width: 17px; height: 17px;
       border-radius: 4px;
-      border: 2px solid #b0d0bc;
+      border: 2px solid rgba(255,255,255,0.3);
       margin-right: 10px;
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -246,7 +246,7 @@
     .delete-btn {
       background: none;
       border: none;
-      color: #b0c8b8;
+      color: rgba(255,255,255,0.3);
       cursor: pointer;
       font-size: 18px;
       padding: 0 4px;
@@ -258,10 +258,10 @@
     /* サイドバーボタン */
     #refresh-btn {
       margin: 10px 12px 8px;
-      background: #fff;
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 6px;
-      color: var(--green-accent);
+      color: #6ee89a;
       padding: 10px;
       font-size: 13px;
       cursor: pointer;
@@ -271,15 +271,15 @@
       gap: 6px;
       font-weight: 700;
     }
-    #refresh-btn:active { background: var(--green-light); }
+    #refresh-btn:active { background: rgba(255,255,255,0.15); }
 
     /* ⑧ push-btn をCSSクラスで管理 */
     #push-btn {
       margin: 0 12px 14px;
-      background: #fff;
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 6px;
-      color: var(--text-muted);
+      color: rgba(255,255,255,0.6);
       padding: 10px;
       font-size: 12px;
       cursor: pointer;
@@ -289,7 +289,7 @@
       gap: 6px;
       font-weight: 600;
     }
-    #push-btn:active { background: var(--green-light); }
+    #push-btn:active { background: rgba(255,255,255,0.15); }
 
     /* ─── メインコンテンツ ─── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
