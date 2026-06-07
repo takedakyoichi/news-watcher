@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>営業ニュースウォッチャー</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+      background: #1e2a3a;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .logo {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 16px;
+    }
+    input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    button.primary {
+      width: 100%;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    button.primary:active { background: #2563eb; }
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .switch {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .switch a { color: #3b82f6; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">📰</div>
+  <h1>営業ニュースウォッチャー</h1>
+  <p class="subtitle">{{ "アカウント作成" if mode == "register" else "ログイン" }}</p>
+
+  <div class="error" id="error"></div>
+
+  <label>ユーザー名</label>
+  <input type="text" id="username" placeholder="username" autocomplete="username" />
+
+  <label>パスワード</label>
+  <input type="password" id="password" placeholder="••••••" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" />
+
+  {% if mode == "register" %}
+  <button class="primary" onclick="submit()">アカウント作成</button>
+  <div class="switch">すでにアカウントをお持ちの方は <a href="/login">ログイン</a></div>
+  {% else %}
+  <button class="primary" onclick="submit()">ログイン</button>
+  <div class="switch">アカウントをお持ちでない方は <a href="/register">新規登録</a></div>
+  {% endif %}
+</div>
+
+<script>
+const mode = "{{ mode }}";
+
+document.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+async function submit() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const errEl = document.getElementById("error");
+  errEl.style.display = "none";
+
+  const res = await fetch(`/api/auth/${mode === "register" ? "register" : "login"}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    errEl.textContent = data.error;
+    errEl.style.display = "block";
+    return;
+  }
+  location.href = "/";
+}
+</script>
+</body>
+</html>
