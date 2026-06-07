@@ -454,9 +454,11 @@ def sse():
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+# gunicornでも動くようモジュールレベルでスケジューラ起動（全関数定義後）
+_scheduler = BackgroundScheduler()
+_scheduler.add_job(fetch_all_news, "interval", minutes=30)
+_scheduler.start()
+
 if __name__ == "__main__":
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_all_news, "interval", minutes=30, next_run_time=None)
-    scheduler.start()
     print("営業ニュースアプリ起動中... http://localhost:5100")
     app.run(debug=False, port=5100, threaded=True)
