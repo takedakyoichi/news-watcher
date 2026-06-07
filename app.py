@@ -366,7 +366,7 @@ def list_news():
                    FROM news n JOIN companies c ON c.id = n.company_id
                    WHERE n.company_id = ANY(%s) AND c.user_id = %s
                      AND n.fetched_at >= NOW() - INTERVAL '1 month'
-                   ORDER BY n.id DESC LIMIT %s""",
+                   ORDER BY n.published DESC NULLS LAST, n.id DESC LIMIT %s""",
                 (company_ids, current_user.id, limit),
             ).fetchall()
             conn.execute(
@@ -380,7 +380,7 @@ def list_news():
                    FROM news n JOIN companies c ON c.id = n.company_id
                    WHERE c.user_id = %s
                      AND n.fetched_at >= NOW() - INTERVAL '1 month'
-                   ORDER BY n.id DESC LIMIT %s""",
+                   ORDER BY n.published DESC NULLS LAST, n.id DESC LIMIT %s""",
                 (current_user.id, limit),
             ).fetchall()
             conn.execute(
