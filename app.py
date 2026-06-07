@@ -12,12 +12,41 @@ from psycopg.rows import dict_row
 app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# gunicorn起動時もテーブルを初期化する
+def _init_on_startup():
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS companies (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS news (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL REFERENCES companies(id),
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL UNIQUE,
+                    published TEXT,
+                    summary TEXT,
+                    fetched_at TIMESTAMP DEFAULT NOW(),
+                    is_new BOOLEAN DEFAULT TRUE
+                )
+            """)
+    except Exception as e:
+        print(f"DB init error: {e}")
+
 clients: list[queue.Queue] = []
 clients_lock = threading.Lock()
 
 
 def get_db():
     return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+
+
+_init_on_startup()
 
 
 def init_db():
