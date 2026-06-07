@@ -8,8 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import urllib.parse
 import queue
 import threading
+from concurrent.futures import ThreadPoolExecutor
 import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from pywebpush import webpush, WebPushException
 import bcrypt
 import secrets
@@ -20,6 +22,19 @@ app.secret_key = os.environ.get("SECRET_KEY", "eigyo-news-secret-2026")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
+# コネクションプール（min=1, max=5）で接続オーバーヘッドを削減
+_db_pool: ConnectionPool | None = None
+
+def get_pool() -> ConnectionPool:
+    global _db_pool
+    if _db_pool is None:
+        _db_pool = ConnectionPool(
+            DATABASE_URL,
+            min_size=1,
+            max_size=5,
+            kwargs={"row_factory": dict_row},
+        )
+    return _db_pool
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS = {"sub": "mailto:admin@example.com"}
@@ -53,7 +68,7 @@ def load_user(user_id):
 
 
 def get_db():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    return get_pool().connection()
 
 
 def _init_on_startup():
@@ -126,6 +141,11 @@ def _init_on_startup():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            # インデックス追加（検索・ソートを高速化）
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_news_company_id ON news(company_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_news_published ON news(published DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_news_fetched_at ON news(fetched_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_companies_user_id ON companies(user_id)")
     except Exception as e:
         print(f"DB init error: {e}")
 
@@ -186,13 +206,17 @@ def fetch_all_news():
     with get_db() as conn:
         companies = conn.execute("SELECT id, name, user_id FROM companies").fetchall()
 
-    # ユーザーごとに集計
-    user_new_items: dict[int, list] = {}
-    for company in companies:
+    # 並列でニュース取得（最大8スレッド）
+    def fetch_one(company):
         count = fetch_news_for_company(company["id"], company["name"], today_only=True)
-        if count > 0:
-            uid = company["user_id"]
-            user_new_items.setdefault(uid, []).append({"company": company["name"], "count": count})
+        return company, count
+
+    user_new_items: dict[int, list] = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        for company, count in executor.map(fetch_one, companies):
+            if count > 0:
+                uid = company["user_id"]
+                user_new_items.setdefault(uid, []).append({"company": company["name"], "count": count})
 
     for uid, items in user_new_items.items():
         broadcast_sse({"type": "new_news", "items": items, "total": sum(i["count"] for i in items)}, uid)
@@ -412,8 +436,9 @@ def refresh_news():
         companies = conn.execute(
             "SELECT id, name FROM companies WHERE user_id = %s", (current_user.id,)
         ).fetchall()
-    for c in companies:
-        fetch_news_for_company(c["id"], c["name"])
+    # 並列取得で高速化
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(lambda c: fetch_news_for_company(c["id"], c["name"]), companies))
     return jsonify({"ok": True})
 
 
