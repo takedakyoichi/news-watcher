@@ -17,12 +17,12 @@
       --green-accent: #00a040;
       --green-bright: #00c050;
       --green-light: #e8f5ee;
-      --green-tag: #d0edda;
-      --bg: #f2f6f3;
-      --card-bg: #fff;
-      --border: #ccddd4;
-      --text: #0d2818;
-      --text-muted: #4a7060;
+      --green-tag: #d4edda;
+      --bg: #f4f5f7;
+      --card-bg: #ffffff;
+      --border: #e0e4e8;
+      --text: #1a2332;
+      --text-muted: #6b7a8d;
       --new-dot: #c8001e;
       --header-h: 58px;
     }
@@ -271,15 +271,15 @@
 
     #news-bar {
       padding: 8px 16px;
-      background: var(--green-darkest);
-      border-bottom: 1px solid rgba(0,160,64,0.2);
+      background: #fff;
+      border-bottom: 1px solid var(--border);
       font-size: 12px;
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    #news-bar strong { color: #fff; font-weight: 700; }
+    #news-bar strong { color: var(--text); font-weight: 700; }
 
     #news-container {
       flex: 1;
@@ -295,14 +295,14 @@
     .news-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 14px 16px;
-      border-left: 4px solid var(--border);
+      border-left: 3px solid #d0d5db;
       transition: box-shadow 0.15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .news-card.is-new {
       border-left-color: var(--green-accent);
-      background: #f8fdf9;
     }
     .news-company-tag {
       display: inline-block;
@@ -320,7 +320,7 @@
       font-weight: 600;
       line-height: 1.5;
     }
-    .news-title a { color: var(--green-darkest); text-decoration: none; }
+    .news-title a { color: var(--text); text-decoration: none; }
     .news-title a:active { color: var(--green-accent); }
     .news-summary {
       font-size: 12px;
@@ -334,17 +334,8 @@
     }
     .news-meta {
       font-size: 11px;
-      color: #8fa8c0;
+      color: var(--text-muted);
       margin-top: 7px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .news-meta::before {
-      content: "";
-      display: inline-block;
-      width: 12px; height: 1px;
-      background: var(--border);
     }
 
     #empty-state {
