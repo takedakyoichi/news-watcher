@@ -11,20 +11,21 @@
   <meta name="apple-mobile-web-app-title" content="NewsSnap">
   <style>
     :root {
-      --header-bg: #1a3d28;        /* ヘッダーはSMBCグリーン */
-      --sidebar-bg: #1e2530;       /* サイドバーはダークネイビー */
-      --sidebar-bg2: #252d3a;      /* 入力エリアは少し明るく */
-      --sidebar-text: #b8c5d4;
-      --sidebar-border: rgba(255,255,255,0.08);
+      --header-bg: #007a30;
+      --sidebar-bg: #ffffff;
+      --sidebar-border: #ddeee4;
+      --sidebar-text: #1a3d28;
       --green-accent: #00a040;
+      --green-hover: #e6f5ec;
+      --green-selected: #d0ead8;
       --green-light: #e8f5ee;
       --green-tag: #d4edda;
       --green-mid: #2d6b45;
-      --bg: #f4f5f7;
+      --bg: #f2f7f4;
       --card-bg: #ffffff;
-      --border: #e0e4e8;
-      --text: #1a2332;
-      --text-muted: #6b7a8d;
+      --border: #dde8e1;
+      --text: #0d2818;
+      --text-muted: #5a7a65;
       --new-dot: #c8001e;
       --header-h: 58px;
     }
@@ -98,17 +99,17 @@
       height: 100%;
       overflow: hidden;
       transition: transform 0.25s ease;
-      border-right: 1px solid rgba(255,255,255,0.08);
+      border-right: 1px solid var(--sidebar-border);
     }
 
     /* 企業追加フォーム */
     #add-form {
-      padding: 14px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--sidebar-border);
       display: flex;
       gap: 6px;
       position: relative;
-      background: var(--header-bg);
+      background: var(--green-light);
     }
     #suggest-list {
       position: absolute;
@@ -135,21 +136,21 @@
     .suggest-highlight { color: var(--green-accent); font-weight: 700; }
     #add-form input {
       flex: 1;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 5px;
-      color: #fff;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
       padding: 9px 10px;
       font-size: 14px;
       outline: none;
       min-width: 0;
     }
-    #add-form input::placeholder { color: rgba(255,255,255,0.35); }
-    #add-form input:focus { border-color: var(--green-accent); background: rgba(255,255,255,0.16); }
+    #add-form input::placeholder { color: #a0b8a8; }
+    #add-form input:focus { border-color: var(--green-accent); box-shadow: 0 0 0 2px rgba(0,160,64,0.15); }
     #add-form button {
       background: var(--green-accent);
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       color: #fff;
       padding: 9px 13px;
       font-size: 13px;
@@ -158,7 +159,7 @@
       white-space: nowrap;
       letter-spacing: 0.3px;
     }
-    #add-form button:active { background: var(--green-bright); }
+    #add-form button:active { background: #007a30; }
 
     /* 企業リスト */
     #company-list {
@@ -182,13 +183,15 @@
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: background 0.12s;
+      border-bottom: 1px solid var(--sidebar-border);
     }
-    .all-item:active, .all-item.active {
-      background: rgba(0,192,80,0.18);
+    .all-item:active { background: var(--green-hover); }
+    .all-item.active {
+      background: var(--green-selected);
       border-left-color: var(--green-accent);
     }
-    .all-item span { font-size: 13px; color: var(--sidebar-text); font-weight: 600; flex: 1; }
-    .all-item.active span { color: #fff; }
+    .all-item span { font-size: 13px; color: var(--sidebar-text); font-weight: 700; flex: 1; }
+    .all-item.active span { color: #007a30; }
 
     .company-item {
       display: flex;
@@ -197,17 +200,18 @@
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: background 0.12s;
+      border-bottom: 1px solid var(--sidebar-border);
     }
-    .company-item:active { background: rgba(255,255,255,0.05); }
+    .company-item:active { background: var(--green-hover); }
     .company-item.selected {
-      background: rgba(0,192,80,0.15);
+      background: var(--green-selected);
       border-left-color: var(--green-accent);
     }
-    .company-item.selected .company-name { color: #fff; }
+    .company-item.selected .company-name { color: #007a30; font-weight: 600; }
     .company-check {
       width: 17px; height: 17px;
       border-radius: 4px;
-      border: 2px solid rgba(255,255,255,0.22);
+      border: 2px solid #b0d0bc;
       margin-right: 10px;
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -217,6 +221,7 @@
     .company-item.selected .company-check {
       background: var(--green-accent);
       border-color: var(--green-accent);
+      color: #fff;
     }
     .company-name {
       flex: 1;
@@ -241,7 +246,7 @@
     .delete-btn {
       background: none;
       border: none;
-      color: rgba(255,255,255,0.22);
+      color: #b0c8b8;
       cursor: pointer;
       font-size: 18px;
       padding: 0 4px;
@@ -253,10 +258,10 @@
     /* サイドバーボタン */
     #refresh-btn {
       margin: 10px 12px 8px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 5px;
-      color: var(--sidebar-text);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--green-accent);
       padding: 10px;
       font-size: 13px;
       cursor: pointer;
@@ -264,17 +269,17 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      font-weight: 600;
+      font-weight: 700;
     }
-    #refresh-btn:active { background: rgba(255,255,255,0.14); }
+    #refresh-btn:active { background: var(--green-light); }
 
     /* ⑧ push-btn をCSSクラスで管理 */
     #push-btn {
       margin: 0 12px 14px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 5px;
-      color: rgba(255,255,255,0.65);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
       padding: 10px;
       font-size: 12px;
       cursor: pointer;
@@ -284,7 +289,7 @@
       gap: 6px;
       font-weight: 600;
     }
-    #push-btn:active { background: rgba(255,255,255,0.14); }
+    #push-btn:active { background: var(--green-light); }
 
     /* ─── メインコンテンツ ─── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
