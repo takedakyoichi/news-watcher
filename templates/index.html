@@ -369,6 +369,9 @@
     <button id="refresh-btn" onclick="refreshNews()">
       <span id="refresh-icon">↻</span> 今すぐ更新
     </button>
+    <button id="push-btn" onclick="togglePush()" style="margin: 0 14px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #c8d6e5; padding: 10px; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      🔔 通知をオンにする
+    </button>
   </nav>
 
   <div id="main">
@@ -566,11 +569,59 @@ document.getElementById("company-input").addEventListener("keydown", e => {
   if (e.key === "Enter") addCompany();
 });
 
+// ─── プッシュ通知 ───
+let swRegistration = null;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function initServiceWorker() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    swRegistration = await navigator.serviceWorker.register('/static/sw.js');
+    const sub = await swRegistration.pushManager.getSubscription();
+    updatePushBtn(!!sub);
+  } catch (e) { console.warn('SW登録失敗:', e); }
+}
+
+function updatePushBtn(isSubscribed) {
+  const btn = document.getElementById("push-btn");
+  if (!btn) return;
+  btn.textContent = isSubscribed ? "🔕 通知をオフにする" : "🔔 通知をオンにする";
+}
+
+async function togglePush() {
+  if (!swRegistration) { showToast("このブラウザはプッシュ通知に対応していません"); return; }
+  const existing = await swRegistration.pushManager.getSubscription();
+  if (existing) {
+    await existing.unsubscribe();
+    await api("/api/push/unsubscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: existing.endpoint }) });
+    updatePushBtn(false);
+    showToast("通知をオフにしました");
+  } else {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") { showToast("通知が許可されていません"); return; }
+    const { key } = await api("/api/vapid-public-key");
+    const sub = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key)
+    });
+    await api("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub) });
+    updatePushBtn(true);
+    showToast("通知をオンにしました🔔");
+  }
+}
+
 (async () => {
   await loadCompanies();
   await loadUnreadCounts();
   await loadNews();
   connectSSE();
+  await initServiceWorker();
 })();
 </script>
 </body>

@@ -8,9 +8,13 @@ import queue
 import threading
 import psycopg
 from psycopg.rows import dict_row
+from pywebpush import webpush, WebPushException
 
 app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_CLAIMS = {"sub": "mailto:admin@example.com"}
 
 # gunicorn起動時もテーブルを初期化する
 def _init_on_startup():
@@ -33,6 +37,14 @@ def _init_on_startup():
                     summary TEXT,
                     fetched_at TIMESTAMP DEFAULT NOW(),
                     is_new BOOLEAN DEFAULT TRUE
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id SERIAL PRIMARY KEY,
+                    endpoint TEXT UNIQUE NOT NULL,
+                    subscription JSONB NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
     except Exception as e:
@@ -111,6 +123,28 @@ def fetch_all_news():
 
     if new_items:
         broadcast_sse({"type": "new_news", "items": new_items, "total": sum(i["count"] for i in new_items)})
+        body = "、".join([f'{i["company"]}({i["count"]}件)' for i in new_items])
+        send_push_notifications("📰 新着ニュース", body)
+
+
+def send_push_notifications(title: str, body: str):
+    if not VAPID_PRIVATE_KEY:
+        return
+    with get_db() as conn:
+        subs = conn.execute("SELECT subscription FROM push_subscriptions").fetchall()
+    for row in subs:
+        sub = row["subscription"]
+        try:
+            webpush(
+                subscription_info=sub,
+                data=json.dumps({"title": title, "body": body}, ensure_ascii=False),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS,
+            )
+        except WebPushException as e:
+            if "410" in str(e) or "404" in str(e):
+                with get_db() as conn:
+                    conn.execute("DELETE FROM push_subscriptions WHERE endpoint = %s", (sub.get("endpoint"),))
 
 
 def broadcast_sse(data: dict):
@@ -200,6 +234,31 @@ def unread_counts():
             "SELECT company_id, COUNT(*) as count FROM news WHERE is_new = TRUE GROUP BY company_id"
         ).fetchall()
     return jsonify({str(r["company_id"]): r["count"] for r in rows})
+
+
+@app.route("/api/vapid-public-key")
+def vapid_public_key():
+    return jsonify({"key": VAPID_PUBLIC_KEY})
+
+
+@app.route("/api/push/subscribe", methods=["POST"])
+def push_subscribe():
+    sub = request.json
+    endpoint = sub.get("endpoint", "")
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO push_subscriptions (endpoint, subscription) VALUES (%s, %s) ON CONFLICT (endpoint) DO NOTHING",
+            (endpoint, json.dumps(sub))
+        )
+    return jsonify({"ok": True})
+
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+def push_unsubscribe():
+    endpoint = (request.json or {}).get("endpoint", "")
+    with get_db() as conn:
+        conn.execute("DELETE FROM push_subscriptions WHERE endpoint = %s", (endpoint,))
+    return jsonify({"ok": True})
 
 
 @app.route("/api/news/refresh", methods=["POST"])
