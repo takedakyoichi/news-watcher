@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>営業ニュースウォッチャー</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --sidebar-bg: #1e2a3a;
+      --sidebar-text: #c8d6e5;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --card-bg: #fff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --new-dot: #ef4444;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+      --header-h: 56px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── ヘッダー（共通） ─── */
+    #app-header {
+      height: var(--header-h);
+      min-height: var(--header-h);
+      background: var(--sidebar-bg);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      position: relative;
+      z-index: 100;
+    }
+    #menu-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      display: none;
+    }
+    #app-header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+    #header-company {
+      font-size: 12px;
+      color: var(--sidebar-text);
+      margin-left: 4px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #10b981; flex-shrink: 0;
+    }
+    #status-dot.disconnected { background: #ef4444; }
+
+    /* ─── レイアウト ─── */
+    #layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── サイドバー ─── */
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      transition: transform 0.25s ease;
+    }
+    #add-form {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      gap: 6px;
+    }
+    #add-form input {
+      flex: 1;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: #fff;
+      padding: 9px 10px;
+      font-size: 14px;
+      outline: none;
+      min-width: 0;
+    }
+    #add-form input::placeholder { color: rgba(255,255,255,0.4); }
+    #add-form input:focus { border-color: var(--accent); }
+    #add-form button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 9px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    #add-form button:active { background: var(--accent-hover); }
+
+    #company-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 6px 0;
+    }
+    .all-item {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 4px;
+    }
+    .all-item:active, .all-item.active { background: rgba(59,130,246,0.25); }
+    .all-item span { font-size: 14px; color: var(--sidebar-text); font-weight: 600; flex: 1; }
+    .all-item.active span { color: #fff; }
+
+    .company-item {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      cursor: pointer;
+    }
+    .company-item:active { background: rgba(255,255,255,0.07); }
+    .company-item.active { background: rgba(59,130,246,0.25); }
+    .company-item.active .company-name { color: #fff; }
+    .company-name {
+      flex: 1;
+      font-size: 14px;
+      color: var(--sidebar-text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .badge {
+      background: var(--new-dot);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 6px;
+      min-width: 20px;
+      text-align: center;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.35);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 0 4px;
+      line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .delete-btn:active { color: #ef4444; }
+
+    #refresh-btn {
+      margin: 10px 14px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: var(--sidebar-text);
+      padding: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    #refresh-btn:active { background: rgba(255,255,255,0.16); }
+
+    /* ─── メイン ─── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #news-container {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ─── ニュースカード ─── */
+    .news-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      transition: box-shadow 0.15s;
+    }
+    .news-card.is-new { border-left: 3px solid var(--accent); }
+    .news-company-tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .news-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+    .news-title a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    .news-title a:active { color: var(--accent); }
+    .news-summary {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-top: 5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      color: var(--text-muted);
+      gap: 8px;
+      padding: 32px;
+      text-align: center;
+    }
+    #empty-state .icon { font-size: 44px; }
+    #empty-state p { font-size: 14px; }
+
+    .loading {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ─── ニュース件数バー ─── */
+    #news-bar {
+      padding: 8px 16px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #news-bar strong { color: var(--text); }
+
+    /* ─── Toast ─── */
+    #toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 13px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+      text-align: center;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ─── オーバーレイ（モバイル用） ─── */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+
+    /* ─── モバイル ─── */
+    @media (max-width: 640px) {
+      #menu-btn { display: block; }
+      #sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100dvh;
+        z-index: 110;
+        transform: translateX(-100%);
+        padding-top: var(--header-h);
+      }
+      #sidebar.open { transform: translateX(0); }
+      #overlay.visible { display: block; }
+      #news-container { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header id="app-header">
+  <button id="menu-btn" onclick="toggleSidebar()" aria-label="メニュー">☰</button>
+  <h1>📰 営業ニュース</h1>
+  <span id="header-company">すべてのニュース</span>
+  <div id="status-dot"></div>
+</header>
+
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<div id="layout">
+  <nav id="sidebar">
+    <div id="add-form">
+      <input type="text" id="company-input" placeholder="企業名を追加..." inputmode="search" />
+      <button onclick="addCompany()">追加</button>
+    </div>
+    <div class="all-item active" id="all-item" onclick="selectCompany(null)">
+      <span>🗂 すべて</span>
+      <span id="all-badge" class="badge" style="display:none"></span>
+    </div>
+    <div id="company-list"></div>
+    <button id="refresh-btn" onclick="refreshNews()">
+      <span id="refresh-icon">↻</span> 今すぐ更新
+    </button>
+  </nav>
+
+  <div id="main">
+    <div id="news-bar">
+      <span id="news-count-label">読み込み中...</span>
+    </div>
+    <div id="news-container">
+      <div class="loading">読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let currentCompanyId = null;
+let currentCompanyName = "すべてのニュース";
+let companies = [];
+let unreadCounts = {};
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("visible");
+}
+function closeSidebar() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("overlay").classList.remove("visible");
+}
+
+function connectSSE() {
+  const es = new EventSource("/api/events");
+  const dot = document.getElementById("status-dot");
+  es.onopen = () => dot.className = "";
+  es.onerror = () => {
+    dot.className = "disconnected";
+    setTimeout(connectSSE, 5000);
+    es.close();
+  };
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "new_news") {
+      loadUnreadCounts();
+      loadNews();
+      const msg = data.items.map(i => `${i.company}: ${i.count}件`).join(", ");
+      showToast(`新着 ${msg}`);
+      if (Notification.permission === "granted") {
+        new Notification("新着ニュース", { body: msg });
+      }
+    } else if (data.type === "company_added") {
+      loadCompanies();
+      loadNews();
+    }
+  };
+}
+
+if (Notification.permission === "default") {
+  Notification.requestPermission();
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+async function loadCompanies() {
+  companies = await api("/api/companies");
+  renderSidebar();
+}
+
+async function loadUnreadCounts() {
+  unreadCounts = await api("/api/news/unread-counts");
+  renderSidebar();
+}
+
+function renderSidebar() {
+  const list = document.getElementById("company-list");
+  list.innerHTML = companies.map(c => {
+    const count = unreadCounts[c.id] || 0;
+    const badge = count > 0 ? `<span class="badge">${count}</span>` : "";
+    const active = currentCompanyId === c.id ? "active" : "";
+    return `<div class="company-item ${active}" onclick="selectCompany(${c.id}, '${escHtml(c.name)}')">
+      <span class="company-name">${escHtml(c.name)}</span>
+      ${badge}
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteCompany(${c.id}, '${escHtml(c.name)}')">×</button>
+    </div>`;
+  }).join("");
+
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+  const allBadge = document.getElementById("all-badge");
+  allBadge.textContent = totalUnread;
+  allBadge.style.display = totalUnread > 0 ? "" : "none";
+  document.getElementById("all-item").className = "all-item" + (currentCompanyId === null ? " active" : "");
+}
+
+async function loadNews() {
+  const container = document.getElementById("news-container");
+  container.innerHTML = '<div class="loading">読み込み中...</div>';
+
+  const url = currentCompanyId ? `/api/news?company_id=${currentCompanyId}` : "/api/news";
+  const news = await api(url);
+  await loadUnreadCounts();
+
+  document.getElementById("news-count-label").innerHTML =
+    `<strong>${currentCompanyName}</strong> — ${news.length}件`;
+
+  if (news.length === 0) {
+    container.innerHTML = `<div id="empty-state">
+      <div class="icon">📭</div>
+      <p>ニュースがありません</p>
+      <p style="font-size:12px">「今すぐ更新」を押してみてください</p>
+    </div>`;
+    return;
+  }
+
+  const showTag = currentCompanyId === null;
+  container.innerHTML = news.map(n => {
+    const summary = n.summary ? `<div class="news-summary">${escHtml(n.summary)}</div>` : "";
+    const pub = n.published ? `<span>${formatDate(n.published)}</span>` : "";
+    const tag = showTag ? `<div class="news-company-tag">${escHtml(n.company_name)}</div>` : "";
+    return `<div class="news-card ${n.is_new ? "is-new" : ""}">
+      ${tag}
+      <div class="news-title"><a href="${escHtml(n.url)}" target="_blank" rel="noopener">${escHtml(n.title)}</a></div>
+      ${summary}
+      <div class="news-meta">${pub}</div>
+    </div>`;
+  }).join("");
+}
+
+function selectCompany(id, name) {
+  currentCompanyId = id;
+  currentCompanyName = name || "すべてのニュース";
+  document.getElementById("header-company").textContent = currentCompanyName;
+  renderSidebar();
+  loadNews();
+  closeSidebar();
+}
+
+async function addCompany() {
+  const input = document.getElementById("company-input");
+  const name = input.value.trim();
+  if (!name) return;
+  input.disabled = true;
+  const res = await fetch("/api/companies", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  input.disabled = false;
+  if (!res.ok) { showToast(data.error || "エラー"); return; }
+  input.value = "";
+  showToast(`「${name}」を登録しました`);
+}
+
+async function deleteCompany(id, name) {
+  if (!confirm(`「${name}」を削除しますか？`)) return;
+  await api(`/api/companies/${id}`, { method: "DELETE" });
+  if (currentCompanyId === id) selectCompany(null);
+  await loadCompanies();
+}
+
+async function refreshNews() {
+  const btn = document.getElementById("refresh-btn");
+  const icon = document.getElementById("refresh-icon");
+  btn.disabled = true;
+  icon.textContent = "⟳";
+  showToast("ニュースを更新中...");
+  await api("/api/news/refresh", { method: "POST" });
+  await loadNews();
+  btn.disabled = false;
+  icon.textContent = "↻";
+  showToast("更新しました");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+function escHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function formatDate(s) {
+  if (!s) return "";
+  try {
+    return new Date(s).toLocaleDateString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch { return s; }
+}
+
+document.getElementById("company-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") addCompany();
+});
+
+(async () => {
+  await loadCompanies();
+  await loadUnreadCounts();
+  await loadNews();
+  connectSSE();
+})();
+</script>
+</body>
+</html>
