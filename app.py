@@ -126,11 +126,16 @@ def _init_on_startup():
                     title TEXT NOT NULL,
                     url TEXT NOT NULL,
                     published TEXT,
+                    published_at TIMESTAMPTZ,
                     summary TEXT,
                     fetched_at TIMESTAMP DEFAULT NOW(),
                     is_new BOOLEAN DEFAULT TRUE,
                     UNIQUE(company_id, url)
                 )
+            """)
+            # 既存テーブルにpublished_atカラムがなければ追加
+            conn.execute("""
+                ALTER TABLE news ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -143,7 +148,7 @@ def _init_on_startup():
             """)
             # インデックス追加（検索・ソートを高速化）
             conn.execute("CREATE INDEX IF NOT EXISTS idx_news_company_id ON news(company_id)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_news_published ON news(published DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_news_fetched_at ON news(fetched_at)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_companies_user_id ON companies(user_id)")
     except Exception as e:
@@ -192,8 +197,8 @@ def fetch_news_for_company(company_id: int, company_name: str, today_only: bool 
             summary = entry.get("summary", "")[:300]
             try:
                 conn.execute(
-                    "INSERT INTO news (company_id, title, url, published, summary) VALUES (%s, %s, %s, %s, %s)",
-                    (company_id, title, link, published, summary),
+                    "INSERT INTO news (company_id, title, url, published, published_at, summary) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (company_id, title, link, published, dt, summary),
                 )
                 new_count += 1
             except Exception:
@@ -390,7 +395,7 @@ def list_news():
                    FROM news n JOIN companies c ON c.id = n.company_id
                    WHERE n.company_id = ANY(%s) AND c.user_id = %s
                      AND n.fetched_at >= NOW() - INTERVAL '1 month'
-                   ORDER BY n.published DESC NULLS LAST, n.id DESC LIMIT %s""",
+                   ORDER BY n.published_at DESC NULLS LAST, n.id DESC LIMIT %s""",
                 (company_ids, current_user.id, limit),
             ).fetchall()
             conn.execute(
@@ -404,7 +409,7 @@ def list_news():
                    FROM news n JOIN companies c ON c.id = n.company_id
                    WHERE c.user_id = %s
                      AND n.fetched_at >= NOW() - INTERVAL '1 month'
-                   ORDER BY n.published DESC NULLS LAST, n.id DESC LIMIT %s""",
+                   ORDER BY n.published_at DESC NULLS LAST, n.id DESC LIMIT %s""",
                 (current_user.id, limit),
             ).fetchall()
             conn.execute(
