@@ -1,6 +1,6 @@
 {
-  "name": "営業ニュースウォッチャー",
-  "short_name": "営業ニュース",
+  "name": "NewsSnap",
+  "short_name": "NewsSnap",
   "description": "担当企業のニュースをキャッチ",
   "start_url": "/",
   "display": "standalone",
