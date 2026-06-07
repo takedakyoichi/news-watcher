@@ -11,20 +11,19 @@
   <meta name="apple-mobile-web-app-title" content="NewsSnap">
   <style>
     :root {
-      --navy: #003087;
-      --navy-dark: #002066;
-      --navy-light: #004db3;
-      --green: #00a040;
-      --green-dark: #007a30;
-      --green-light: #e6f7ec;
-      --bg: #f0f4f8;
+      --green-darkest: #0d2818;
+      --green-dark: #1a3d28;
+      --green-mid: #2d6b45;
+      --green-accent: #00a040;
+      --green-bright: #00c050;
+      --green-light: #e8f5ee;
+      --green-tag: #d0edda;
+      --bg: #f2f6f3;
       --card-bg: #fff;
-      --border: #d0dae8;
-      --text: #0a1f44;
-      --text-muted: #5a7090;
-      --new-dot: #e8002d;
-      --tag-bg: #e6f7ec;
-      --tag-text: #007a30;
+      --border: #ccddd4;
+      --text: #0d2818;
+      --text-muted: #4a7060;
+      --new-dot: #c8001e;
       --header-h: 58px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,14 +41,14 @@
     #app-header {
       height: var(--header-h);
       min-height: var(--header-h);
-      background: var(--navy);
+      background: var(--green-darkest);
       display: flex;
       align-items: center;
       padding: 0 16px;
       gap: 12px;
       position: relative;
       z-index: 100;
-      border-bottom: 3px solid var(--green);
+      border-bottom: 3px solid var(--green-accent);
     }
     #menu-btn {
       background: none;
@@ -68,10 +67,10 @@
       letter-spacing: 0.5px;
       white-space: nowrap;
     }
-    #app-header h1 span { color: var(--green); }
+    #app-header h1 span { color: var(--green-accent); }
     #header-company {
       font-size: 12px;
-      color: rgba(255,255,255,0.65);
+      color: rgba(255,255,255,0.6);
       margin-left: 4px;
       flex: 1;
       white-space: nowrap;
@@ -80,9 +79,9 @@
     }
     #status-dot {
       width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green); flex-shrink: 0;
+      background: var(--green-accent); flex-shrink: 0;
     }
-    #status-dot.disconnected { background: #e8002d; }
+    #status-dot.disconnected { background: #c8001e; }
 
     /* ─── レイアウト ─── */
     #layout { display: flex; flex: 1; overflow: hidden; }
@@ -91,13 +90,13 @@
     #sidebar {
       width: 264px;
       min-width: 264px;
-      background: var(--navy-dark);
+      background: var(--green-dark);
       display: flex;
       flex-direction: column;
       height: 100%;
       overflow: hidden;
       transition: transform 0.25s ease;
-      border-right: 1px solid rgba(0,160,64,0.3);
+      border-right: 1px solid rgba(0,160,64,0.25);
     }
 
     /* 企業追加フォーム */
@@ -107,7 +106,7 @@
       display: flex;
       gap: 6px;
       position: relative;
-      background: var(--navy);
+      background: var(--green-darkest);
     }
     #suggest-list {
       position: absolute;
@@ -120,7 +119,7 @@
       max-height: 220px;
       overflow-y: auto;
       z-index: 200;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     }
     .suggest-item {
       padding: 10px 14px;
@@ -130,12 +129,12 @@
       border-bottom: 1px solid var(--border);
     }
     .suggest-item:last-child { border-bottom: none; }
-    .suggest-item:hover, .suggest-item.active { background: var(--green-light); color: var(--navy); }
-    .suggest-highlight { color: var(--green-dark); font-weight: 700; }
+    .suggest-item:hover, .suggest-item.active { background: var(--green-light); color: var(--green-darkest); }
+    .suggest-highlight { color: var(--green-accent); font-weight: 700; }
     #add-form input {
       flex: 1;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
       border-radius: 5px;
       color: #fff;
       padding: 9px 10px;
@@ -143,10 +142,10 @@
       outline: none;
       min-width: 0;
     }
-    #add-form input::placeholder { color: rgba(255,255,255,0.4); }
-    #add-form input:focus { border-color: var(--green); background: rgba(255,255,255,0.18); }
+    #add-form input::placeholder { color: rgba(255,255,255,0.35); }
+    #add-form input:focus { border-color: var(--green-accent); background: rgba(255,255,255,0.16); }
     #add-form button {
-      background: var(--green);
+      background: var(--green-accent);
       border: none;
       border-radius: 5px;
       color: #fff;
@@ -157,7 +156,7 @@
       white-space: nowrap;
       letter-spacing: 0.3px;
     }
-    #add-form button:active { background: var(--green-dark); }
+    #add-form button:active { background: var(--green-bright); }
 
     /* 企業リスト */
     #company-list {
@@ -169,7 +168,7 @@
     .sidebar-section-label {
       font-size: 10px;
       font-weight: 700;
-      color: rgba(255,255,255,0.35);
+      color: rgba(255,255,255,0.3);
       letter-spacing: 1px;
       padding: 10px 14px 4px;
       text-transform: uppercase;
@@ -183,10 +182,10 @@
       transition: background 0.12s;
     }
     .all-item:active, .all-item.active {
-      background: rgba(0,160,64,0.15);
-      border-left-color: var(--green);
+      background: rgba(0,192,80,0.18);
+      border-left-color: var(--green-accent);
     }
-    .all-item span { font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 600; flex: 1; }
+    .all-item span { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 600; flex: 1; }
     .all-item.active span { color: #fff; }
 
     .company-item {
@@ -197,16 +196,16 @@
       border-left: 3px solid transparent;
       transition: background 0.12s;
     }
-    .company-item:active { background: rgba(255,255,255,0.06); }
+    .company-item:active { background: rgba(255,255,255,0.05); }
     .company-item.selected {
-      background: rgba(0,160,64,0.12);
-      border-left-color: var(--green);
+      background: rgba(0,192,80,0.15);
+      border-left-color: var(--green-accent);
     }
     .company-item.selected .company-name { color: #fff; }
     .company-check {
       width: 17px; height: 17px;
       border-radius: 4px;
-      border: 2px solid rgba(255,255,255,0.25);
+      border: 2px solid rgba(255,255,255,0.22);
       margin-right: 10px;
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -214,13 +213,13 @@
       transition: background 0.15s, border-color 0.15s;
     }
     .company-item.selected .company-check {
-      background: var(--green);
-      border-color: var(--green);
+      background: var(--green-accent);
+      border-color: var(--green-accent);
     }
     .company-name {
       flex: 1;
       font-size: 13px;
-      color: rgba(255,255,255,0.7);
+      color: rgba(255,255,255,0.65);
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
@@ -240,22 +239,22 @@
     .delete-btn {
       background: none;
       border: none;
-      color: rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.22);
       cursor: pointer;
       font-size: 18px;
       padding: 0 4px;
       line-height: 1;
       -webkit-tap-highlight-color: transparent;
     }
-    .delete-btn:active { color: #e8002d; }
+    .delete-btn:active { color: #c8001e; }
 
     /* サイドバーボタン */
     #refresh-btn {
       margin: 10px 12px 8px;
-      background: rgba(0,160,64,0.15);
-      border: 1px solid rgba(0,160,64,0.4);
+      background: rgba(0,160,64,0.18);
+      border: 1px solid rgba(0,192,80,0.35);
       border-radius: 5px;
-      color: #5edd90;
+      color: #6ee89a;
       padding: 10px;
       font-size: 13px;
       cursor: pointer;
@@ -265,17 +264,17 @@
       gap: 6px;
       font-weight: 600;
     }
-    #refresh-btn:active { background: rgba(0,160,64,0.28); }
+    #refresh-btn:active { background: rgba(0,160,64,0.32); }
 
     /* ─── メインコンテンツ ─── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
     #news-bar {
       padding: 8px 16px;
-      background: var(--navy);
-      border-bottom: 1px solid rgba(0,48,135,0.2);
+      background: var(--green-darkest);
+      border-bottom: 1px solid rgba(0,160,64,0.2);
       font-size: 12px;
-      color: rgba(255,255,255,0.65);
+      color: rgba(255,255,255,0.6);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -302,13 +301,13 @@
       transition: box-shadow 0.15s;
     }
     .news-card.is-new {
-      border-left-color: var(--green);
-      background: #fcfffe;
+      border-left-color: var(--green-accent);
+      background: #f8fdf9;
     }
     .news-company-tag {
       display: inline-block;
-      background: var(--green-light);
-      color: var(--green-dark);
+      background: var(--green-tag);
+      color: var(--green-mid);
       font-size: 10px;
       font-weight: 700;
       padding: 2px 8px;
@@ -321,8 +320,8 @@
       font-weight: 600;
       line-height: 1.5;
     }
-    .news-title a { color: var(--navy); text-decoration: none; }
-    .news-title a:active { color: var(--green-dark); }
+    .news-title a { color: var(--green-darkest); text-decoration: none; }
+    .news-title a:active { color: var(--green-accent); }
     .news-summary {
       font-size: 12px;
       color: var(--text-muted);
@@ -375,19 +374,19 @@
       bottom: max(24px, env(safe-area-inset-bottom, 24px));
       left: 50%;
       transform: translateX(-50%) translateY(80px);
-      background: var(--navy);
+      background: var(--green-darkest);
       color: #fff;
       padding: 12px 20px;
       border-radius: 4px;
       font-size: 13px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       opacity: 0;
       transition: all 0.3s;
       z-index: 1000;
       white-space: nowrap;
       max-width: calc(100vw - 32px);
       text-align: center;
-      border-bottom: 3px solid var(--green);
+      border-bottom: 3px solid var(--green-accent);
     }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
@@ -396,7 +395,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,32,102,0.5);
+      background: rgba(0,20,10,0.55);
       z-index: 90;
     }
 
