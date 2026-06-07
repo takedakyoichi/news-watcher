@@ -437,7 +437,8 @@ if (Notification.permission === "default") {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, opts);
+  const res = await fetch(path, { credentials: "same-origin", ...opts });
+  if (res.status === 401) { location.href = "/login"; return {}; }
   return res.json();
 }
 

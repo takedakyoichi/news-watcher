@@ -1,8 +1,9 @@
 import os
 import feedparser
 import json
-from flask import Flask, request, jsonify, render_template, Response, redirect, url_for, session
+from flask import Flask, request, jsonify, render_template, Response, redirect
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 from apscheduler.schedulers.background import BackgroundScheduler
 import urllib.parse
 import queue
@@ -14,12 +15,10 @@ import bcrypt
 import secrets
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.environ.get("SECRET_KEY", "eigyo-news-secret-2026")
-app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["REMEMBER_COOKIE_SECURE"] = True
-app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
 DATABASE_URL = os.environ.get("DATABASE_URL")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
@@ -27,6 +26,12 @@ VAPID_CLAIMS = {"sub": "mailto:admin@example.com"}
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login_page"
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "unauthorized"}), 401
+    return redirect("/login")
 
 clients: list[queue.Queue] = []
 clients_lock = threading.Lock()
