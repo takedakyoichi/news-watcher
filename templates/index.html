@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>営業ニュースウォッチャー</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="営業ニュース">
   <style>
     :root {
       --bg: #f5f7fa;
@@ -595,7 +598,16 @@ function updatePushBtn(isSubscribed) {
 }
 
 async function togglePush() {
-  if (!swRegistration) { showToast("このブラウザはプッシュ通知に対応していません"); return; }
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+      showToast("iOSはホーム画面に追加後に通知が使えます");
+    } else {
+      showToast("このブラウザはプッシュ通知に対応していません");
+    }
+    return;
+  }
+  if (!swRegistration) { showToast("通知の準備中です。少し待ってから再度お試しください"); return; }
   const existing = await swRegistration.pushManager.getSubscription();
   if (existing) {
     await existing.unsubscribe();
