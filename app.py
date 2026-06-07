@@ -133,20 +133,20 @@ def _init_on_startup():
 _init_on_startup()
 
 
-def fetch_news_for_company(company_id: int, company_name: str) -> int:
-    from datetime import date, timezone
+def fetch_news_for_company(company_id: int, company_name: str, today_only: bool = False) -> int:
+    from datetime import date, datetime, timezone, timedelta
     import email.utils
 
     today = date.today()
+    one_month_ago = datetime.now(timezone.utc) - timedelta(days=31)
 
-    def is_today(published_str):
+    def parse_dt(published_str):
         if not published_str:
-            return False
+            return None
         try:
-            dt = email.utils.parsedate_to_datetime(published_str)
-            return dt.astimezone(timezone.utc).date() == today
+            return email.utils.parsedate_to_datetime(published_str).astimezone(timezone.utc)
         except Exception:
-            return False
+            return None
 
     query = urllib.parse.quote(company_name)
     url = f"https://news.google.com/rss/search?q={query}&hl=ja&gl=JP&ceid=JP:ja"
@@ -159,8 +159,14 @@ def fetch_news_for_company(company_id: int, company_name: str) -> int:
     with get_db() as conn:
         for entry in feed.entries[:50]:
             published = entry.get("published", "")
-            if not is_today(published):
-                continue
+            dt = parse_dt(published)
+            # today_only=True（自動更新）は本日分のみ、False（初回・手動）は1ヶ月以内
+            if today_only:
+                if dt is None or dt.date() != today:
+                    continue
+            else:
+                if dt is not None and dt < one_month_ago:
+                    continue
             title = entry.get("title", "")
             link = entry.get("link", "")
             summary = entry.get("summary", "")[:300]
@@ -183,7 +189,7 @@ def fetch_all_news():
     # ユーザーごとに集計
     user_new_items: dict[int, list] = {}
     for company in companies:
-        count = fetch_news_for_company(company["id"], company["name"])
+        count = fetch_news_for_company(company["id"], company["name"], today_only=True)
         if count > 0:
             uid = company["user_id"]
             user_new_items.setdefault(uid, []).append({"company": company["name"], "count": count})
