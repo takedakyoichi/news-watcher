@@ -646,20 +646,29 @@ function selectAll() {
   closeSidebar();
 }
 
+let _addingCompany = false;
 async function addCompany() {
+  if (_addingCompany) return;
   const input = document.getElementById("company-input");
+  const addBtn = document.querySelector("#add-form button");
   const name = input.value.trim();
   if (!name) return;
+  _addingCompany = true;
   input.disabled = true;
+  if (addBtn) addBtn.disabled = true;
   const res = await fetch("/api/companies", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ name })
   });
   const data = await res.json();
   input.disabled = false;
+  if (addBtn) addBtn.disabled = false;
+  _addingCompany = false;
   if (!res.ok) { showToast(data.error || "エラー"); return; }
   input.value = "";
+  hideSuggestions();
   showToast(`「${name}」を登録しました`);
 }
 
