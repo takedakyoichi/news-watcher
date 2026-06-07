@@ -353,21 +353,26 @@ def delete_company(company_id):
 @app.route("/api/news")
 @login_required
 def list_news():
-    company_id = request.args.get("company_id", type=int)
+    # company_ids=1,2,3 形式で複数指定可、未指定はすべて
+    ids_param = request.args.get("company_ids", "")
+    company_ids = [int(x) for x in ids_param.split(",") if x.strip().isdigit()]
     limit = request.args.get("limit", 50, type=int)
 
     with get_db() as conn:
-        if company_id:
+        if company_ids:
             rows = conn.execute(
                 """SELECT n.id, c.name as company_name, n.title, n.url, n.published,
                           n.summary, n.fetched_at, n.is_new
                    FROM news n JOIN companies c ON c.id = n.company_id
-                   WHERE n.company_id = %s AND c.user_id = %s
+                   WHERE n.company_id = ANY(%s) AND c.user_id = %s
                      AND n.fetched_at >= NOW() - INTERVAL '1 month'
                    ORDER BY n.id DESC LIMIT %s""",
-                (company_id, current_user.id, limit),
+                (company_ids, current_user.id, limit),
             ).fetchall()
-            conn.execute("UPDATE news SET is_new = FALSE WHERE company_id = %s", (company_id,))
+            conn.execute(
+                "UPDATE news SET is_new = FALSE WHERE company_id = ANY(%s)",
+                (company_ids,)
+            )
         else:
             rows = conn.execute(
                 """SELECT n.id, c.name as company_name, n.title, n.url, n.published,

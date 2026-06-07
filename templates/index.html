@@ -174,12 +174,26 @@
     .company-item {
       display: flex;
       align-items: center;
-      padding: 11px 16px;
+      padding: 9px 16px;
       cursor: pointer;
     }
     .company-item:active { background: rgba(255,255,255,0.07); }
-    .company-item.active { background: rgba(59,130,246,0.25); }
-    .company-item.active .company-name { color: #fff; }
+    .company-item.selected { background: rgba(59,130,246,0.18); }
+    .company-item.selected .company-name { color: #fff; }
+    .company-check {
+      width: 18px; height: 18px;
+      border-radius: 5px;
+      border: 2px solid rgba(255,255,255,0.3);
+      margin-right: 10px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .company-item.selected .company-check {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
     .company-name {
       flex: 1;
       font-size: 14px;
@@ -391,7 +405,7 @@
       <button onclick="addCompany()">追加</button>
       <div id="suggest-list" style="display:none"></div>
     </div>
-    <div class="all-item active" id="all-item" onclick="selectCompany(null)">
+    <div class="all-item active" id="all-item" onclick="selectAll()">
       <span>🗂 すべて</span>
       <span id="all-badge" class="badge" style="display:none"></span>
     </div>
@@ -417,8 +431,7 @@
 <div id="toast"></div>
 
 <script>
-let currentCompanyId = null;
-let currentCompanyName = "すべてのニュース";
+let selectedIds = new Set(); // 空=すべて表示
 let companies = [];
 let unreadCounts = {};
 
@@ -482,8 +495,10 @@ function renderSidebar() {
   list.innerHTML = companies.map(c => {
     const count = unreadCounts[c.id] || 0;
     const badge = count > 0 ? `<span class="badge">${count}</span>` : "";
-    const active = currentCompanyId === c.id ? "active" : "";
-    return `<div class="company-item ${active}" onclick="selectCompany(${c.id}, '${escHtml(c.name)}')">
+    const sel = selectedIds.has(c.id) ? "selected" : "";
+    const check = selectedIds.has(c.id) ? "✓" : "";
+    return `<div class="company-item ${sel}" onclick="toggleCompany(${c.id})">
+      <span class="company-check">${check}</span>
       <span class="company-name">${escHtml(c.name)}</span>
       ${badge}
       <button class="delete-btn" onclick="event.stopPropagation(); deleteCompany(${c.id}, '${escHtml(c.name)}')">×</button>
@@ -494,19 +509,32 @@ function renderSidebar() {
   const allBadge = document.getElementById("all-badge");
   allBadge.textContent = totalUnread;
   allBadge.style.display = totalUnread > 0 ? "" : "none";
-  document.getElementById("all-item").className = "all-item" + (currentCompanyId === null ? " active" : "");
+  document.getElementById("all-item").className = "all-item" + (selectedIds.size === 0 ? " active" : "");
 }
 
 async function loadNews() {
   const container = document.getElementById("news-container");
   container.innerHTML = '<div class="loading">読み込み中...</div>';
 
-  const url = currentCompanyId ? `/api/news?company_id=${currentCompanyId}` : "/api/news";
+  let url = "/api/news";
+  if (selectedIds.size > 0) {
+    url += "?company_ids=" + [...selectedIds].join(",");
+  }
   const news = await api(url);
   await loadUnreadCounts();
 
-  document.getElementById("news-count-label").innerHTML =
-    `<strong>${currentCompanyName}</strong> — ${news.length}件`;
+  let label;
+  if (selectedIds.size === 0) {
+    label = "すべてのニュース";
+  } else if (selectedIds.size === 1) {
+    const id = [...selectedIds][0];
+    const c = companies.find(c => c.id === id);
+    label = c ? c.name : "選択中";
+  } else {
+    label = `${selectedIds.size}社のニュース`;
+  }
+  document.getElementById("header-company").textContent = label;
+  document.getElementById("news-count-label").innerHTML = `<strong>${label}</strong> — ${news.length}件`;
 
   if (news.length === 0) {
     container.innerHTML = `<div id="empty-state">
@@ -517,7 +545,7 @@ async function loadNews() {
     return;
   }
 
-  const showTag = currentCompanyId === null;
+  const showTag = selectedIds.size !== 1;
   container.innerHTML = news.map(n => {
     const summary = n.summary ? `<div class="news-summary">${escHtml(n.summary)}</div>` : "";
     const pub = n.published ? `<span>${formatDate(n.published)}</span>` : "";
@@ -531,10 +559,18 @@ async function loadNews() {
   }).join("");
 }
 
-function selectCompany(id, name) {
-  currentCompanyId = id;
-  currentCompanyName = name || "すべてのニュース";
-  document.getElementById("header-company").textContent = currentCompanyName;
+function toggleCompany(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+  } else {
+    selectedIds.add(id);
+  }
+  renderSidebar();
+  loadNews();
+}
+
+function selectAll() {
+  selectedIds.clear();
   renderSidebar();
   loadNews();
   closeSidebar();
@@ -560,7 +596,7 @@ async function addCompany() {
 async function deleteCompany(id, name) {
   if (!confirm(`「${name}」を削除しますか？`)) return;
   await api(`/api/companies/${id}`, { method: "DELETE" });
-  if (currentCompanyId === id) selectCompany(null);
+  selectedIds.delete(id);
   await loadCompanies();
 }
 
