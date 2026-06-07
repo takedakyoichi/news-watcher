@@ -92,13 +92,29 @@ def fetch_news_for_company(company_id: int, company_name: str) -> int:
     except Exception:
         return 0
 
+    from datetime import date, timezone
+    import email.utils
+
+    today = date.today()
+
+    def is_today(published_str):
+        if not published_str:
+            return False
+        try:
+            dt = email.utils.parsedate_to_datetime(published_str)
+            return dt.astimezone(timezone.utc).date() == today
+        except Exception:
+            return False
+
     new_count = 0
     with get_db() as conn:
-        for entry in feed.entries[:20]:
+        for entry in feed.entries[:50]:
+            published = entry.get("published", "")
+            if not is_today(published):
+                continue
             title = entry.get("title", "")
             link = entry.get("link", "")
             summary = entry.get("summary", "")[:300]
-            published = entry.get("published", "")
             try:
                 conn.execute(
                     "INSERT INTO news (company_id, title, url, published, summary) VALUES (%s, %s, %s, %s, %s)",
