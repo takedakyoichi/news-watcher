@@ -59,6 +59,20 @@ def get_db():
 def _init_on_startup():
     try:
         with get_db() as conn:
+            # usersテーブルがなければ完全初期化（旧データを削除）
+            has_users = conn.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_name = 'users'
+                )
+            """).fetchone()["exists"]
+
+            if not has_users:
+                # 旧テーブルを削除して再構築
+                conn.execute("DROP TABLE IF EXISTS news CASCADE")
+                conn.execute("DROP TABLE IF EXISTS companies CASCADE")
+                conn.execute("DROP TABLE IF EXISTS push_subscriptions CASCADE")
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
@@ -67,6 +81,20 @@ def _init_on_startup():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+
+            # companiesにuser_idがなければ再構築
+            has_user_id = conn.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'companies' AND column_name = 'user_id'
+                )
+            """).fetchone()["exists"]
+
+            if not has_user_id:
+                conn.execute("DROP TABLE IF EXISTS news CASCADE")
+                conn.execute("DROP TABLE IF EXISTS companies CASCADE")
+                conn.execute("DROP TABLE IF EXISTS push_subscriptions CASCADE")
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS companies (
                     id SERIAL PRIMARY KEY,
