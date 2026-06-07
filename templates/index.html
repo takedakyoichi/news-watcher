@@ -102,7 +102,31 @@
       border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex;
       gap: 6px;
+      position: relative;
     }
+    #suggest-list {
+      position: absolute;
+      top: calc(100% - 12px);
+      left: 14px;
+      right: 70px;
+      background: #253347;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .suggest-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #c8d6e5;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .suggest-item:last-child { border-bottom: none; }
+    .suggest-item:hover, .suggest-item.active { background: rgba(59,130,246,0.3); color: #fff; }
+    .suggest-highlight { color: #60a5fa; font-weight: 700; }
     #add-form input {
       flex: 1;
       background: rgba(255,255,255,0.1);
@@ -363,8 +387,9 @@
 <div id="layout">
   <nav id="sidebar">
     <div id="add-form">
-      <input type="text" id="company-input" placeholder="企業名を追加..." inputmode="search" />
+      <input type="text" id="company-input" placeholder="企業名を追加..." inputmode="search" autocomplete="off" />
       <button onclick="addCompany()">追加</button>
+      <div id="suggest-list" style="display:none"></div>
     </div>
     <div class="all-item active" id="all-item" onclick="selectCompany(null)">
       <span>🗂 すべて</span>
@@ -576,8 +601,105 @@ async function logout() {
   location.href = "/login";
 }
 
-document.getElementById("company-input").addEventListener("keydown", e => {
-  if (e.key === "Enter") addCompany();
+// ─── 企業名候補リスト ───
+const COMPANY_LIST = [
+  "トヨタ自動車","ホンダ","日産自動車","スズキ","マツダ","三菱自動車","スバル","ダイハツ工業","いすゞ自動車","日野自動車",
+  "ソニーグループ","パナソニック","シャープ","日立製作所","東芝","三菱電機","富士通","NEC","京セラ","村田製作所",
+  "キヤノン","リコー","ブラザー工業","セイコーエプソン","コニカミノルタ",
+  "ソフトバンクグループ","NTTドコモ","KDDI","楽天グループ","DeNA","サイバーエージェント","リクルートホールディングス","フジテレビジョン","TBS","テレビ朝日",
+  "三菱UFJフィナンシャル・グループ","三井住友フィナンシャルグループ","みずほフィナンシャルグループ","野村ホールディングス","大和証券グループ","SBIホールディングス",
+  "三井住友カード","クレディセゾン","オリコ","イオンフィナンシャルサービス","三菱UFJニコス",
+  "トヨタファイナンシャルサービス","ジャックス","アプラス","ライフカード",
+  "東京海上ホールディングス","MS&ADインシュアランスグループ","SOMPOホールディングス","第一生命ホールディングス","日本生命保険","住友生命保険",
+  "三井物産","三菱商事","伊藤忠商事","住友商事","丸紅","豊田通商","双日",
+  "イオン","セブン＆アイ・ホールディングス","ファーストリテイリング","高島屋","三越伊勢丹ホールディングス","ローソン","ファミリーマート",
+  "任天堂","バンダイナムコホールディングス","カプコン","スクウェア・エニックス","コナミグループ","セガサミーホールディングス",
+  "武田薬品工業","アステラス製薬","第一三共","エーザイ","塩野義製薬","中外製薬","大塚ホールディングス",
+  "信越化学工業","三菱ケミカルグループ","住友化学","旭化成","東レ","帝人","東ソー",
+  "新日本製鐵","JFEホールディングス","住友金属鉱山","三菱マテリアル","DOWAホールディングス",
+  "大林組","鹿島建設","清水建設","竹中工務店","大成建設","積水ハウス","大和ハウス工業","三井不動産","三菱地所",
+  "ANAホールディングス","日本航空","JR東日本","JR東海","JR西日本","東急","小田急電鉄","近鉄グループホールディングス",
+  "日本郵政","ヤマトホールディングス","佐川急便","日本通運","近鉄エクスプレス",
+  "東京電力ホールディングス","関西電力","中部電力","九州電力","東北電力","東京ガス","大阪ガス",
+  "キーエンス","SMC","ファナック","安川電機","ダイキン工業","コマツ","クボタ","三菱重工業","川崎重工業","IHI",
+  "花王","ライオン","ユニ・チャーム","資生堂","コーセー","ポーラ・オルビスホールディングス",
+  "味の素","日清食品ホールディングス","明治ホールディングス","森永乳業","江崎グリコ","カゴメ","キッコーマン","ヤクルト本社",
+  "サントリーホールディングス","アサヒグループホールディングス","キリンホールディングス","宝ホールディングス",
+  "オリンパス","テルモ","シスメックス","日本光電","フクダ電子",
+  "富士フイルムホールディングス","コニカミノルタ","ニコン","ハニカム",
+  "オムロン","横河電機","アドバンテスト","東京エレクトロン","レーザーテック","ディスコ","SCREENホールディングス",
+  "ソフトバンク","LINE","メルカリ","freee","マネーフォワード","Sansan","SmartHR","Chatwork","サイボウズ","ラクス",
+  "NTTデータ","野村総合研究所","伊藤忠テクノソリューションズ","TIS","SCSK","日鉄ソリューションズ","日立ソリューションズ",
+  "パーソルホールディングス","リクルート","エン・ジャパン","マイナビ","テンプホールディングス",
+  "セコム","ALSOK","綜合警備保障",
+  "アマゾンジャパン","グーグル合同会社","マイクロソフト","IBM","アクセンチュア","デロイトトーマツ","PwCジャパン","EYジャパン","KPMGジャパン"
+];
+
+// ─── 入力補完 ───
+const input = document.getElementById("company-input");
+const suggestList = document.getElementById("suggest-list");
+let activeIdx = -1;
+let filteredList = [];
+
+function showSuggestions(query) {
+  if (!query) { hideSuggestions(); return; }
+  filteredList = COMPANY_LIST.filter(c =>
+    c.includes(query) || c.toLowerCase().includes(query.toLowerCase())
+  ).slice(0, 10);
+
+  if (filteredList.length === 0) { hideSuggestions(); return; }
+
+  activeIdx = -1;
+  suggestList.innerHTML = filteredList.map((c, i) => {
+    const idx = c.indexOf(query);
+    const highlighted = idx >= 0
+      ? escHtml(c.slice(0, idx)) + `<span class="suggest-highlight">${escHtml(query)}</span>` + escHtml(c.slice(idx + query.length))
+      : escHtml(c);
+    return `<div class="suggest-item" data-idx="${i}" onmousedown="selectSuggestion(${i})">${highlighted}</div>`;
+  }).join("");
+  suggestList.style.display = "block";
+}
+
+function hideSuggestions() {
+  suggestList.style.display = "none";
+  activeIdx = -1;
+  filteredList = [];
+}
+
+function selectSuggestion(idx) {
+  input.value = filteredList[idx];
+  hideSuggestions();
+  addCompany();
+}
+
+function updateActiveItem() {
+  [...suggestList.querySelectorAll(".suggest-item")].forEach((el, i) => {
+    el.classList.toggle("active", i === activeIdx);
+  });
+}
+
+input.addEventListener("input", () => showSuggestions(input.value.trim()));
+input.addEventListener("blur", () => setTimeout(hideSuggestions, 150));
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    if (activeIdx >= 0 && filteredList[activeIdx]) {
+      e.preventDefault();
+      selectSuggestion(activeIdx);
+    } else {
+      hideSuggestions();
+      addCompany();
+    }
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    activeIdx = Math.min(activeIdx + 1, filteredList.length - 1);
+    updateActiveItem();
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    activeIdx = Math.max(activeIdx - 1, -1);
+    updateActiveItem();
+  } else if (e.key === "Escape") {
+    hideSuggestions();
+  }
 });
 
 // ─── プッシュ通知 ───
