@@ -49,6 +49,9 @@
       color: #374151;
       margin-bottom: 6px;
     }
+    /* ⑨ form-groupで余白管理 */
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-of-type { margin-bottom: 0; }
     input {
       width: 100%;
       padding: 11px 14px;
@@ -56,7 +59,6 @@
       border-radius: 8px;
       font-size: 15px;
       outline: none;
-      margin-bottom: 16px;
     }
     input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
     button.primary {
@@ -98,11 +100,14 @@
 
   <div class="error" id="error"></div>
 
-  <label>ユーザー名</label>
-  <input type="text" id="username" placeholder="username" autocomplete="username" />
-
-  <label>パスワード</label>
-  <input type="password" id="password" placeholder="••••••" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" />
+  <div class="form-group">
+    <label>ユーザー名</label>
+    <input type="text" id="username" placeholder="username" autocomplete="username" />
+  </div>
+  <div class="form-group">
+    <label>パスワード</label>
+    <input type="password" id="password" placeholder="••••••" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" />
+  </div>
 
   {% if mode == "register" %}
   <button class="primary" onclick="submit()">アカウント作成</button>
@@ -120,7 +125,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
 
 async function submit() {
   const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const password = document.getElementById("password").value; // ① trimしない（前後スペースも有効なパスワード）
   const errEl = document.getElementById("error");
   errEl.style.display = "none";
 

@@ -266,6 +266,24 @@
     }
     #refresh-btn:active { background: rgba(0,160,64,0.32); }
 
+    /* ⑧ push-btn をCSSクラスで管理 */
+    #push-btn {
+      margin: 0 12px 14px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 5px;
+      color: rgba(255,255,255,0.65);
+      padding: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    #push-btn:active { background: rgba(255,255,255,0.14); }
+
     /* ─── メインコンテンツ ─── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -435,7 +453,7 @@
     <button id="refresh-btn" onclick="refreshNews()">
       <span id="refresh-icon">↻</span> 今すぐ更新
     </button>
-    <button id="push-btn" onclick="togglePush()" style="margin: 0 12px 14px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; color: rgba(255,255,255,0.65); padding: 10px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight:600;">
+    <button id="push-btn" onclick="togglePush()">
       🔔 通知をオンにする
     </button>
   </nav>
@@ -482,8 +500,9 @@ function connectSSE() {
       loadNews();
       const msg = data.items.map(i => `${i.company}: ${i.count}件`).join(", ");
       showToast(`新着 ${msg}`);
-      if (Notification.permission === "granted") {
-        new Notification("新着ニュース", { body: msg });
+      // ② Service Worker経由で通知（バックグラウンド対応・XSSリスク回避）
+      if (Notification.permission === "granted" && swRegistration) {
+        swRegistration.showNotification("新着ニュース", { body: escHtml(msg) });
       }
     } else if (data.type === "company_added") {
       loadCompanies();
@@ -492,14 +511,22 @@ function connectSSE() {
   };
 }
 
-if (Notification.permission === "default") {
-  Notification.requestPermission();
-}
+// ③ 起動時の無条件requestPermissionは削除（togglePush()内でのみ要求）
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { credentials: "same-origin", ...opts });
-  if (res.status === 401) { location.href = "/login"; return {}; }
-  return res.json();
+  // ⑦ エラーハンドリング強化
+  try {
+    const res = await fetch(path, { credentials: "same-origin", ...opts });
+    if (res.status === 401) { location.href = "/login"; return {}; }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { error: err.error || `エラー (${res.status})` };
+    }
+    return await res.json();
+  } catch (e) {
+    console.error("API error:", e);
+    return { error: "通信エラーが発生しました" };
+  }
 }
 
 async function loadCompanies() {
@@ -519,11 +546,12 @@ function renderSidebar() {
     const badge = count > 0 ? `<span class="badge">${count}</span>` : "";
     const sel = selectedIds.has(c.id) ? "selected" : "";
     const check = selectedIds.has(c.id) ? "✓" : "";
-    return `<div class="company-item ${sel}" onclick="toggleCompany(${c.id})">
+    // ④ data属性方式でシングルクォートエスケープ漏れを回避
+    return `<div class="company-item ${sel}" data-id="${c.id}">
       <span class="company-check">${check}</span>
       <span class="company-name">${escHtml(c.name)}</span>
       ${badge}
-      <button class="delete-btn" onclick="event.stopPropagation(); deleteCompany(${c.id}, '${escHtml(c.name)}')">×</button>
+      <button class="delete-btn" data-del-id="${c.id}">×</button>
     </div>`;
   }).join("");
 
@@ -532,6 +560,19 @@ function renderSidebar() {
   allBadge.textContent = totalUnread;
   allBadge.style.display = totalUnread > 0 ? "" : "none";
   document.getElementById("all-item").className = "all-item" + (selectedIds.size === 0 ? " active" : "");
+
+  // ④ イベントリスナーをdata属性で登録（onclick内エスケープ漏れ回避）
+  list.querySelectorAll(".company-item").forEach(el => {
+    el.addEventListener("click", () => toggleCompany(Number(el.dataset.id)));
+  });
+  list.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.delId);
+      const c = companies.find(c => c.id === id);
+      if (c) deleteCompany(id, c.name);
+    });
+  });
 }
 
 async function loadNews() {
@@ -623,16 +664,18 @@ async function deleteCompany(id, name) {
 }
 
 async function refreshNews() {
+  // ⑤ 二重toast修正：更新中はボタン表示で示し、完了時のみtoast
   const btn = document.getElementById("refresh-btn");
   const icon = document.getElementById("refresh-icon");
   btn.disabled = true;
   icon.textContent = "⟳";
-  showToast("ニュースを更新中...");
+  btn.style.color = "#a0f0c0";
   await api("/api/news/refresh", { method: "POST" });
   await loadNews();
   btn.disabled = false;
   icon.textContent = "↻";
-  showToast("更新しました");
+  btn.style.color = "";
+  showToast("更新しました ✓");
 }
 
 function showToast(msg) {
@@ -664,7 +707,7 @@ const COMPANY_LIST = [
   // 自動車・輸送機器
   "トヨタ自動車","ホンダ","日産自動車","スズキ","マツダ","三菱自動車工業","SUBARU","ダイハツ工業","いすゞ自動車","日野自動車",
   "ヤマハ発動機","川崎重工業","本田技研工業","トヨタ車体","豊田自動織機","アイシン","デンソー","豊田合成","ジェイテクト","住友電気工業",
-  "日本精工","NTN","ジェイテクト","NOK","ブリヂストン","住友ゴム工業","横浜ゴム","東洋タイヤ","オートバックスセブン","イエローハット",
+  "日本精工","NTN","NOK","ブリヂストン","住友ゴム工業","横浜ゴム","東洋タイヤ","オートバックスセブン","イエローハット",
 
   // 電機・精密機器
   "ソニーグループ","パナソニックホールディングス","シャープ","日立製作所","東芝","三菱電機","富士通","NEC","京セラ","村田製作所",
