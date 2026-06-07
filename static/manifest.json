@@ -1,6 +1,6 @@
 {
-  "name": "News Snap",
-  "short_name": "News Snap",
+  "name": "NewsSnap",
+  "short_name": "NewsSnap",
   "description": "担当企業のニュースをキャッチ",
   "start_url": "/",
   "display": "standalone",
