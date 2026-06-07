@@ -11,13 +11,15 @@
   <meta name="apple-mobile-web-app-title" content="NewsSnap">
   <style>
     :root {
-      --green-darkest: #0d2818;
-      --green-dark: #1a3d28;
-      --green-mid: #2d6b45;
+      --header-bg: #1a3d28;        /* ヘッダーはSMBCグリーン */
+      --sidebar-bg: #1e2530;       /* サイドバーはダークネイビー */
+      --sidebar-bg2: #252d3a;      /* 入力エリアは少し明るく */
+      --sidebar-text: #b8c5d4;
+      --sidebar-border: rgba(255,255,255,0.08);
       --green-accent: #00a040;
-      --green-bright: #00c050;
       --green-light: #e8f5ee;
       --green-tag: #d4edda;
+      --green-mid: #2d6b45;
       --bg: #f4f5f7;
       --card-bg: #ffffff;
       --border: #e0e4e8;
@@ -41,7 +43,7 @@
     #app-header {
       height: var(--header-h);
       min-height: var(--header-h);
-      background: var(--green-darkest);
+      background: var(--header-bg);
       display: flex;
       align-items: center;
       padding: 0 16px;
@@ -90,13 +92,13 @@
     #sidebar {
       width: 264px;
       min-width: 264px;
-      background: var(--green-dark);
+      background: var(--sidebar-bg);
       display: flex;
       flex-direction: column;
       height: 100%;
       overflow: hidden;
       transition: transform 0.25s ease;
-      border-right: 1px solid rgba(0,160,64,0.25);
+      border-right: 1px solid rgba(255,255,255,0.08);
     }
 
     /* 企業追加フォーム */
@@ -106,7 +108,7 @@
       display: flex;
       gap: 6px;
       position: relative;
-      background: var(--green-darkest);
+      background: var(--header-bg);
     }
     #suggest-list {
       position: absolute;
@@ -185,7 +187,7 @@
       background: rgba(0,192,80,0.18);
       border-left-color: var(--green-accent);
     }
-    .all-item span { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 600; flex: 1; }
+    .all-item span { font-size: 13px; color: var(--sidebar-text); font-weight: 600; flex: 1; }
     .all-item.active span { color: #fff; }
 
     .company-item {
@@ -219,7 +221,7 @@
     .company-name {
       flex: 1;
       font-size: 13px;
-      color: rgba(255,255,255,0.65);
+      color: var(--sidebar-text);
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
@@ -251,10 +253,10 @@
     /* サイドバーボタン */
     #refresh-btn {
       margin: 10px 12px 8px;
-      background: rgba(0,160,64,0.18);
-      border: 1px solid rgba(0,192,80,0.35);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 5px;
-      color: #6ee89a;
+      color: var(--sidebar-text);
       padding: 10px;
       font-size: 13px;
       cursor: pointer;
@@ -264,7 +266,7 @@
       gap: 6px;
       font-weight: 600;
     }
-    #refresh-btn:active { background: rgba(0,160,64,0.32); }
+    #refresh-btn:active { background: rgba(255,255,255,0.14); }
 
     /* ⑧ push-btn をCSSクラスで管理 */
     #push-btn {
@@ -383,7 +385,7 @@
       bottom: max(24px, env(safe-area-inset-bottom, 24px));
       left: 50%;
       transform: translateX(-50%) translateY(80px);
-      background: var(--green-darkest);
+      background: var(--header-bg);
       color: #fff;
       padding: 12px 20px;
       border-radius: 4px;
