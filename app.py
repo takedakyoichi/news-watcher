@@ -22,19 +22,15 @@ app.secret_key = os.environ.get("SECRET_KEY", "eigyo-news-secret-2026")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
-# コネクションプール（min=1, max=5）で接続オーバーヘッドを削減
-_db_pool: ConnectionPool | None = None
 
-def get_pool() -> ConnectionPool:
-    global _db_pool
-    if _db_pool is None:
-        _db_pool = ConnectionPool(
-            DATABASE_URL,
-            min_size=1,
-            max_size=5,
-            kwargs={"row_factory": dict_row},
-        )
-    return _db_pool
+# コネクションプールをモジュールレベルで初期化（スレッドセーフ）
+_db_pool = ConnectionPool(
+    DATABASE_URL,
+    min_size=1,
+    max_size=5,
+    kwargs={"row_factory": dict_row},
+)
+
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS = {"sub": "mailto:admin@example.com"}
@@ -68,7 +64,7 @@ def load_user(user_id):
 
 
 def get_db():
-    return get_pool().connection()
+    return _db_pool.connection()
 
 
 def _init_on_startup():
