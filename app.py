@@ -11,7 +11,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import psycopg
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, NullConnectionPool
 from pywebpush import webpush, WebPushException
 import bcrypt
 import secrets
@@ -23,7 +23,8 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# コネクションプール（遅延初期化 + ダブルチェックロックでスレッドセーフ）
+# NullConnectionPool: 接続プールなし、リクエストごとに接続を作成・解放
+# Supabase無料枠の同時接続制限を超えないシンプルな構成
 _db_pool = None
 _pool_lock = threading.Lock()
 
@@ -63,11 +64,11 @@ def get_db():
     global _db_pool
     if _db_pool is None:
         with _pool_lock:
-            if _db_pool is None:  # ダブルチェックロック（スレッドセーフ）
-                _db_pool = ConnectionPool(
+            if _db_pool is None:
+                # NullConnectionPool: 接続プールを持たず、都度接続を作成・解放
+                # Supabaseの接続数制限を超えないため安全
+                _db_pool = NullConnectionPool(
                     DATABASE_URL,
-                    min_size=1,
-                    max_size=10,
                     kwargs={"row_factory": dict_row},
                 )
     return _db_pool.connection()
@@ -245,7 +246,7 @@ def fetch_all_news():
         return company, count
 
     user_new_items: dict[int, list] = {}
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         for company, count in executor.map(fetch_one, companies):
             if count > 0:
                 uid = company["user_id"]
@@ -474,7 +475,7 @@ def refresh_news():
             "SELECT id, name FROM companies WHERE user_id = %s", (current_user.id,)
         ).fetchall()
     # 並列取得で高速化
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         list(executor.map(lambda c: fetch_news_for_company(c["id"], c["name"]), companies))
     return jsonify({"ok": True})
 
