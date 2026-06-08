@@ -24,17 +24,13 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # コネクションプールをモジュールレベルで初期化（スレッドセーフ）
+# min_size=0: 起動時に接続を張らない→即起動、接続はリクエスト時に初めて確立
 _db_pool = ConnectionPool(
     DATABASE_URL,
     min_size=0,
     max_size=10,
-    max_waiting=20,
-    timeout=10,                # 接続取得の最大待ち時間（秒）
-    reconnect_timeout=30,      # 再接続試行の最大時間（秒）
     kwargs={"row_factory": dict_row},
-    open=False,
 )
-_db_pool.open(wait=False)  # バックグラウンドで接続確立（起動をブロックしない）
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
@@ -69,7 +65,7 @@ def load_user(user_id):
 
 
 def get_db():
-    return _db_pool.connection(timeout=10)
+    return _db_pool.connection()
 
 
 def _init_on_startup():
