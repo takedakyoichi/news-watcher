@@ -11,7 +11,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import psycopg
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool, NullConnectionPool
+from contextlib import contextmanager
 from pywebpush import webpush, WebPushException
 import bcrypt
 import secrets
@@ -23,10 +23,6 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# NullConnectionPool: 接続プールなし、リクエストごとに接続を作成・解放
-# Supabase無料枠の同時接続制限を超えないシンプルな構成
-_db_pool = None
-_pool_lock = threading.Lock()
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
@@ -60,18 +56,18 @@ def load_user(user_id):
     return None
 
 
+@contextmanager
 def get_db():
-    global _db_pool
-    if _db_pool is None:
-        with _pool_lock:
-            if _db_pool is None:
-                # NullConnectionPool: 接続プールを持たず、都度接続を作成・解放
-                # Supabaseの接続数制限を超えないため安全
-                _db_pool = NullConnectionPool(
-                    DATABASE_URL,
-                    kwargs={"row_factory": dict_row},
-                )
-    return _db_pool.connection()
+    """リクエストごとに新規接続を作成して解放（プールなし）"""
+    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _init_on_startup():
