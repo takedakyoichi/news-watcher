@@ -27,7 +27,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 _db_pool = ConnectionPool(
     DATABASE_URL,
     min_size=0,
-    max_size=5,
+    max_size=10,
     kwargs={"row_factory": dict_row},
     open=False,
 )
@@ -178,27 +178,41 @@ def fetch_news_for_company(company_id: int, company_name: str, today_only: bool 
     except Exception:
         return 0
 
+    # フィルタリングしてバッチINSERT用データを作成
+    rows = []
+    for entry in feed.entries[:50]:
+        published = entry.get("published", "")
+        dt = parse_dt(published)
+        if today_only:
+            if dt is None or dt.date() != today:
+                continue
+        else:
+            if dt is not None and dt < one_month_ago:
+                continue
+        rows.append((
+            company_id,
+            entry.get("title", ""),
+            entry.get("link", ""),
+            published,
+            dt,
+            entry.get("summary", "")[:300],
+        ))
+
+    if not rows:
+        return 0
+
+    # バッチINSERT（ON CONFLICT DO NOTHING で重複スキップ）
     new_count = 0
     with get_db() as conn:
-        for entry in feed.entries[:50]:
-            published = entry.get("published", "")
-            dt = parse_dt(published)
-            # today_only=True（自動更新）は本日分のみ、False（初回・手動）は1ヶ月以内
-            if today_only:
-                if dt is None or dt.date() != today:
-                    continue
-            else:
-                if dt is not None and dt < one_month_ago:
-                    continue
-            title = entry.get("title", "")
-            link = entry.get("link", "")
-            summary = entry.get("summary", "")[:300]
+        for row in rows:
             try:
                 conn.execute(
-                    "INSERT INTO news (company_id, title, url, published, published_at, summary) VALUES (%s, %s, %s, %s, %s, %s)",
-                    (company_id, title, link, published, dt, summary),
+                    "INSERT INTO news (company_id, title, url, published, published_at, summary)"
+                    " VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (company_id, url) DO NOTHING",
+                    row,
                 )
-                new_count += 1
+                # rowcount=1なら新規挿入
+                new_count += conn.pgresult.command_tuples or 0
             except Exception:
                 conn.rollback()
 
@@ -364,8 +378,12 @@ def add_company():
     except Exception:
         return jsonify({"error": "すでに登録されています"}), 409
 
-    fetch_news_for_company(company_id, name)
-    broadcast_sse({"type": "company_added", "name": name}, current_user.id)
+    uid = current_user.id
+    # ニュース取得はバックグラウンドで実行（レスポンスをブロックしない）
+    def _fetch_and_notify():
+        fetch_news_for_company(company_id, name)
+        broadcast_sse({"type": "company_added", "name": name}, uid)
+    threading.Thread(target=_fetch_and_notify, daemon=True).start()
     return jsonify({"id": company_id, "name": name}), 201
 
 

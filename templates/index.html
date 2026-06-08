@@ -511,17 +511,14 @@ function connectSSE() {
   es.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.type === "new_news") {
-      loadUnreadCounts();
-      loadNews();
+      loadNews(); // loadNews内で未読数も並列取得
       const msg = data.items.map(i => `${i.company}: ${i.count}件`).join(", ");
       showToast(`新着 ${msg}`);
-      // ② Service Worker経由で通知（バックグラウンド対応・XSSリスク回避）
       if (Notification.permission === "granted" && swRegistration) {
         swRegistration.showNotification("新着ニュース", { body: escHtml(msg) });
       }
     } else if (data.type === "company_added") {
-      loadCompanies();
-      loadNews();
+      loadNews(); // loadNews内で未読数も並列取得
     }
   };
 }
@@ -551,6 +548,15 @@ async function loadCompanies() {
 
 async function loadUnreadCounts() {
   unreadCounts = await api("/api/news/unread-counts");
+  renderSidebar();
+}
+
+// 企業リストと未読数を並列取得
+async function loadCompaniesAndCounts() {
+  [companies, unreadCounts] = await Promise.all([
+    api("/api/companies"),
+    api("/api/news/unread-counts"),
+  ]);
   renderSidebar();
 }
 
@@ -598,8 +604,13 @@ async function loadNews() {
   if (selectedIds.size > 0) {
     url += "?company_ids=" + [...selectedIds].join(",");
   }
-  const news = await api(url);
-  await loadUnreadCounts();
+  // ニュースと未読数を並列取得
+  const [news, counts] = await Promise.all([
+    api(url),
+    api("/api/news/unread-counts"),
+  ]);
+  unreadCounts = counts;
+  renderSidebar();
 
   let label;
   if (selectedIds.size === 0) {
@@ -684,7 +695,7 @@ async function deleteCompany(id, name) {
   if (!confirm(`「${name}」を削除しますか？`)) return;
   await api(`/api/companies/${id}`, { method: "DELETE" });
   selectedIds.delete(id);
-  await loadCompanies();
+  await Promise.all([loadCompaniesAndCounts(), loadNews()]);
 }
 
 async function refreshNews() {
@@ -991,11 +1002,13 @@ async function togglePush() {
 }
 
 (async () => {
-  await loadCompanies();
-  await loadUnreadCounts();
-  await loadNews();
+  // 企業リスト・未読数・ニュースを並列取得して起動を高速化
+  await Promise.all([
+    loadCompaniesAndCounts(),
+    loadNews(),
+  ]);
   connectSSE();
-  await initServiceWorker();
+  initServiceWorker(); // awaitしない（バックグラウンドで登録）
 })();
 </script>
 </body>
