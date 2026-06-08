@@ -24,10 +24,9 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # コネクションプールをモジュールレベルで初期化（スレッドセーフ）
-# min_size=0: 起動時に接続を張らない→即起動、接続はリクエスト時に初めて確立
 _db_pool = ConnectionPool(
     DATABASE_URL,
-    min_size=0,
+    min_size=1,
     max_size=10,
     kwargs={"row_factory": dict_row},
 )
@@ -150,10 +149,22 @@ def _init_on_startup():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_companies_user_id ON companies(user_id)")
     except Exception as e:
         print(f"DB init error: {e}")
+        raise  # リトライのため再送出
 
 
-# DB初期化はバックグラウンドで実行（モジュール読み込みをブロックしない）
-threading.Thread(target=_init_on_startup, daemon=True).start()
+def _init_with_retry():
+    import time
+    for attempt in range(5):
+        try:
+            _init_on_startup()
+            print("DB init OK")
+            return
+        except Exception as e:
+            print(f"DB init attempt {attempt+1} failed: {e}")
+            time.sleep(3)
+    print("DB init failed after 5 attempts")
+
+threading.Thread(target=_init_with_retry, daemon=True).start()
 
 
 def fetch_news_for_company(company_id: int, company_name: str, today_only: bool = False) -> int:
