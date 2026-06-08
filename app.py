@@ -28,6 +28,9 @@ _db_pool = ConnectionPool(
     DATABASE_URL,
     min_size=0,
     max_size=10,
+    max_waiting=20,
+    timeout=10,                # 接続取得の最大待ち時間（秒）
+    reconnect_timeout=30,      # 再接続試行の最大時間（秒）
     kwargs={"row_factory": dict_row},
     open=False,
 )
@@ -66,7 +69,7 @@ def load_user(user_id):
 
 
 def get_db():
-    return _db_pool.connection()
+    return _db_pool.connection(timeout=10)
 
 
 def _init_on_startup():
@@ -153,7 +156,8 @@ def _init_on_startup():
         print(f"DB init error: {e}")
 
 
-_init_on_startup()
+# DB初期化はバックグラウンドで実行（モジュール読み込みをブロックしない）
+threading.Thread(target=_init_on_startup, daemon=True).start()
 
 
 def fetch_news_for_company(company_id: int, company_name: str, today_only: bool = False) -> int:
@@ -206,13 +210,12 @@ def fetch_news_for_company(company_id: int, company_name: str, today_only: bool 
     with get_db() as conn:
         for row in rows:
             try:
-                conn.execute(
+                cur = conn.execute(
                     "INSERT INTO news (company_id, title, url, published, published_at, summary)"
                     " VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (company_id, url) DO NOTHING",
                     row,
                 )
-                # rowcount=1なら新規挿入
-                new_count += conn.pgresult.command_tuples or 0
+                new_count += cur.rowcount  # 1=新規挿入, 0=重複スキップ
             except Exception:
                 conn.rollback()
 
