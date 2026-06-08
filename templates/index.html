@@ -461,9 +461,54 @@
       #overlay.visible { display: block; }
       #news-container { padding: 10px 12px; }
     }
+    /* ─── スプラッシュ画面 ─── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--header-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 16px;
+      transition: opacity 0.5s ease;
+    }
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash-logo {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .splash-logo span { color: var(--green-accent); }
+    .splash-tagline {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+    .splash-spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid rgba(255,255,255,0.15);
+      border-top-color: var(--green-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-top: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+
+<div id="splash">
+  <div class="splash-logo">News<span>Snap</span></div>
+  <div class="splash-tagline">担当企業のニュースをリアルタイムでキャッチ</div>
+  <div class="splash-spinner"></div>
+</div>
 
 <header id="app-header">
   <button id="menu-btn" onclick="toggleSidebar()" aria-label="メニュー">☰</button>
@@ -1031,8 +1076,12 @@ async function togglePush() {
     loadCompaniesAndCounts(),
     loadNews(),
   ]);
+  // スプラッシュをフェードアウト
+  const splash = document.getElementById("splash");
+  splash.classList.add("hidden");
+  setTimeout(() => splash.remove(), 500);
   connectSSE();
-  initServiceWorker(); // awaitしない（バックグラウンドで登録）
+  initServiceWorker();
 })();
 </script>
 </body>
