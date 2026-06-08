@@ -26,10 +26,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 # コネクションプールをモジュールレベルで初期化（スレッドセーフ）
 _db_pool = ConnectionPool(
     DATABASE_URL,
-    min_size=1,
+    min_size=0,
     max_size=5,
     kwargs={"row_factory": dict_row},
+    open=False,
 )
+_db_pool.open(wait=False)  # バックグラウンドで接続確立（起動をブロックしない）
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
