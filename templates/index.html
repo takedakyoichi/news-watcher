@@ -112,12 +112,12 @@
 
     /* 企業追加フォーム */
     #add-form {
-      padding: 12px 12px;
-      border-bottom: 1px solid var(--sidebar-border);
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
       display: flex;
       gap: 6px;
       position: relative;
-      background: #1a3d28;
+      background: #0a2010;
     }
     #suggest-list {
       position: absolute;
@@ -144,28 +144,27 @@
     .suggest-highlight { color: var(--green-accent); font-weight: 700; }
     #add-form input {
       flex: 1;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
       border-radius: 6px;
       color: #fff;
       padding: 9px 10px;
-      font-size: 14px;
+      font-size: 13px;
       outline: none;
       min-width: 0;
     }
-    #add-form input::placeholder { color: rgba(255,255,255,0.4); }
-    #add-form input:focus { border-color: var(--green-accent); box-shadow: 0 0 0 2px rgba(0,160,64,0.15); }
+    #add-form input::placeholder { color: rgba(255,255,255,0.45); }
+    #add-form input:focus { border-color: var(--green-accent); background: rgba(255,255,255,0.16); }
     #add-form button {
       background: var(--green-accent);
       border: none;
       border-radius: 6px;
       color: #fff;
-      padding: 9px 13px;
+      padding: 9px 14px;
       font-size: 13px;
       cursor: pointer;
       font-weight: 700;
       white-space: nowrap;
-      letter-spacing: 0.3px;
     }
     #add-form button:active { background: #007a30; }
 
@@ -191,15 +190,15 @@
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: background 0.12s;
-      border-bottom: 1px solid var(--sidebar-border);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
     }
-    .all-item:active { background: var(--green-hover); }
+    .all-item:hover { background: rgba(255,255,255,0.05); }
     .all-item.active {
-      background: var(--green-selected);
-      border-left-color: var(--green-accent);
+      background: var(--green-accent);
+      border-left-color: #fff;
     }
-    .all-item span { font-size: 13px; color: var(--sidebar-text); font-weight: 700; flex: 1; }
-    .all-item.active span { color: #fff; }
+    .all-item span { font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 600; flex: 1; }
+    .all-item.active span { color: #fff; font-weight: 700; }
 
     .company-item {
       display: flex;
@@ -208,22 +207,22 @@
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: background 0.12s;
-      border-bottom: 1px solid var(--sidebar-border);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
     }
-    .company-item:active { background: var(--green-hover); }
+    .company-item:hover { background: rgba(255,255,255,0.05); }
     .company-item.selected {
-      background: var(--green-selected);
+      background: rgba(0,160,64,0.22);
       border-left-color: var(--green-accent);
     }
     .company-item.selected .company-name { color: #fff; font-weight: 600; }
     .company-check {
       width: 17px; height: 17px;
       border-radius: 4px;
-      border: 2px solid rgba(255,255,255,0.3);
+      border: 1.5px solid rgba(255,255,255,0.35);
       margin-right: 10px;
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px;
+      font-size: 11px;
       transition: background 0.15s, border-color 0.15s;
     }
     .company-item.selected .company-check {
@@ -234,8 +233,8 @@
     .company-name {
       flex: 1;
       font-size: 13px;
-      color: var(--sidebar-text);
-      font-weight: 500;
+      color: rgba(255,255,255,0.85);
+      font-weight: 400;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -254,23 +253,26 @@
     .delete-btn {
       background: none;
       border: none;
-      color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.25);
       cursor: pointer;
-      font-size: 18px;
-      padding: 0 4px;
+      font-size: 16px;
+      padding: 2px 6px;
       line-height: 1;
+      border-radius: 4px;
       -webkit-tap-highlight-color: transparent;
+      transition: color 0.1s, background 0.1s;
     }
-    .delete-btn:active { color: #c8001e; }
+    .delete-btn:hover { color: #fff; background: rgba(200,0,30,0.5); }
+    .delete-btn:active { color: #fff; background: #c8001e; }
 
     /* サイドバーボタン */
     #refresh-btn {
-      margin: 10px 12px 8px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 6px;
-      color: #6ee89a;
-      padding: 10px;
+      margin: 10px 10px 6px;
+      background: var(--green-accent);
+      border: none;
+      border-radius: 7px;
+      color: #fff;
+      padding: 11px;
       font-size: 13px;
       cursor: pointer;
       display: flex;
@@ -278,26 +280,27 @@
       justify-content: center;
       gap: 6px;
       font-weight: 700;
+      letter-spacing: 0.2px;
     }
-    #refresh-btn:active { background: rgba(255,255,255,0.15); }
+    #refresh-btn:active { background: #007a30; }
 
-    /* ⑧ push-btn をCSSクラスで管理 */
     #push-btn {
-      margin: 0 12px 14px;
+      margin: 0 10px 12px;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 6px;
-      color: rgba(255,255,255,0.6);
-      padding: 10px;
+      border-radius: 7px;
+      color: rgba(255,255,255,0.55);
+      padding: 9px;
       font-size: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      font-weight: 600;
+      font-weight: 500;
     }
-    #push-btn:active { background: rgba(255,255,255,0.15); }
+    #push-btn:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+    #push-btn:active { background: rgba(255,255,255,0.18); }
 
     /* ─── メインコンテンツ ─── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
