@@ -170,7 +170,7 @@ def _init_with_retry():
 threading.Thread(target=_init_with_retry, daemon=True).start()
 
 
-def fetch_news_for_company(company_id: int, company_name: str, today_only: bool = False) -> int:
+def fetch_news_for_company(company_id: int, company_name: str, today_only: bool = False, mark_as_new: bool = False) -> int:
     from datetime import date, datetime, timezone, timedelta
     import email.utils
 
@@ -215,17 +215,18 @@ def fetch_news_for_company(company_id: int, company_name: str, today_only: bool 
     if not rows:
         return 0
 
-    # バッチINSERT（ON CONFLICT DO NOTHING で重複スキップ）
+    # バッチINSERT
+    # mark_as_new=True（自動更新のみ）→ is_new=TRUE、それ以外は FALSE
     new_count = 0
     with get_db() as conn:
         for row in rows:
             try:
                 cur = conn.execute(
-                    "INSERT INTO news (company_id, title, url, published, published_at, summary)"
-                    " VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (company_id, url) DO NOTHING",
-                    row,
+                    "INSERT INTO news (company_id, title, url, published, published_at, summary, is_new)"
+                    " VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (company_id, url) DO NOTHING",
+                    (*row, mark_as_new),
                 )
-                new_count += cur.rowcount  # 1=新規挿入, 0=重複スキップ
+                new_count += cur.rowcount
             except Exception:
                 conn.rollback()
 
@@ -238,7 +239,8 @@ def fetch_all_news():
 
     # 並列でニュース取得（最大8スレッド）
     def fetch_one(company):
-        count = fetch_news_for_company(company["id"], company["name"], today_only=True)
+        # 自動更新のみ mark_as_new=True（新着バッジの対象）
+        count = fetch_news_for_company(company["id"], company["name"], today_only=True, mark_as_new=True)
         return company, count
 
     user_new_items: dict[int, list] = {}
