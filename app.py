@@ -362,6 +362,44 @@ def index():
     return render_template("index.html", username=current_user.username)
 
 
+@app.route("/api/init")
+@login_required
+def api_init():
+    """起動時に必要なデータを1回のDB接続でまとめて返す"""
+    uid = current_user.id
+    limit = request.args.get("limit", 50, type=int)
+    with get_db() as conn:
+        companies = conn.execute(
+            "SELECT id, name, created_at FROM companies WHERE user_id = %s ORDER BY name",
+            (uid,)
+        ).fetchall()
+        unread = conn.execute(
+            """SELECT n.company_id, COUNT(*) as count FROM news n
+               JOIN companies c ON c.id = n.company_id
+               WHERE n.is_new = TRUE AND c.user_id = %s
+               GROUP BY n.company_id""",
+            (uid,)
+        ).fetchall()
+        news = conn.execute(
+            """SELECT n.id, c.name as company_name, n.title, n.url, n.published,
+                      n.summary, n.fetched_at, n.is_new
+               FROM news n JOIN companies c ON c.id = n.company_id
+               WHERE c.user_id = %s
+                 AND n.fetched_at >= NOW() - INTERVAL '1 month'
+               ORDER BY n.published_at DESC NULLS LAST, n.id DESC LIMIT %s""",
+            (uid, limit),
+        ).fetchall()
+        conn.execute(
+            "UPDATE news SET is_new = FALSE WHERE company_id IN (SELECT id FROM companies WHERE user_id = %s)",
+            (uid,)
+        )
+    return jsonify({
+        "companies": [dict(r) for r in companies],
+        "unread_counts": {str(r["company_id"]): r["count"] for r in unread},
+        "news": [dict(r) for r in news],
+    })
+
+
 @app.route("/api/companies", methods=["GET"])
 @login_required
 def list_companies():
